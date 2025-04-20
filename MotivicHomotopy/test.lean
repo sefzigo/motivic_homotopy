@@ -1,4 +1,3 @@
-
 import Mathlib.Order.Lattice
 import Mathlib.Data.Real.Basic
 
