@@ -99,20 +99,13 @@ def vitaliUnion : Set ℝ := ⋃ i : shiftRange , trans_vitaliSet i
 
 
 lemma vitali_mem_eq_off_rat_diff {x y : ℝ} (hx : x ∈ vitaliSet) (hy : y ∈ vitaliSet)(h : x - y ∈ range ((↑) : ℚ → ℝ)) : x = y := by
-
-have heq : x ≈ y := h
-
-obtain ⟨x', hx'⟩ := hx
-obtain ⟨y', hy'⟩ := hy
-
-rw[hx',hy']
-
-rw[hx', hy'] at heq
-
-refine Subtype.eq_iff.mp ?_
-simp [Quotient.out_eq]
-simp [← Quotient.out_equiv_out]
-exact heq
+  have heq : x ≈ y := h
+  obtain ⟨x', hx'⟩ := hx; obtain ⟨y', hy'⟩ := hy
+  rw[hx',hy']
+  rw[hx', hy'] at heq
+  refine Subtype.eq_iff.mp ?_
+  simp [Quotient.out_eq,← Quotient.out_equiv_out]
+  exact heq
 
 lemma translates_disjoint : Pairwise (Disjoint on trans_vitaliSet) := by
   intro i j h U hUi hUj x hUx
@@ -129,12 +122,6 @@ lemma vit_sub_I : vitaliSet ⊆ I := by
   rintro x ⟨t, ht⟩
   simp_all only [Subtype.coe_prop]
 
-lemma vit_measure_ub (μ : naiveMeasure): μ vitaliSet ≤ ENNReal.ofReal 1 := by
-  have h' : μ I = ENNReal.ofReal 1 := by
-    exact μ.normalised
-  rw[← h']
-  apply μ.monotone (vit_sub_I)
-
 lemma vit_trans_measure {μ : naiveMeasure} {r : shiftRange} :  μ vitaliSet = μ (trans_vitaliSet r) := by
   unfold trans_vitaliSet
   symm
@@ -142,16 +129,15 @@ lemma vit_trans_measure {μ : naiveMeasure} {r : shiftRange} :  μ vitaliSet = �
 
 lemma I_sub_vitUn : I ⊆ vitaliUnion := by
   intro x  hx
-  simp_all [vitaliUnion]
-  set δ := x - Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩ ) with d_def
-  have : equiv'  (Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩)) (⟨ x, hx⟩) := by exact Quotient.eq_mk_iff_out.mp rfl
-  set y :=  Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩ ) with y_def
+  --define delta and show that it is in shiftRange
+  let δ := x - Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩)
+  have : equiv'  (Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩)) ⟨ x, hx⟩ := by exact Quotient.eq_mk_iff_out.mp rfl
+  set y  :=  Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩ ) with y_def
   have ⟨d, d2⟩ : δ ∈ range Rat.cast := equiv'.symm this
   have dI : d ∈ shiftRange := by
-    unfold I at *
-    simp_all [shiftRange]
+    unfold I at *;simp_all [shiftRange]
     rw[← y_def] at d2
-    obtain ⟨ y, hy⟩ := y
+    obtain ⟨y, hy⟩ := y
     simp [mem_Icc] at hx hy
     constructor
     · have : (d: ℝ) ≥ -1 := by linarith
@@ -159,12 +145,13 @@ lemma I_sub_vitUn : I ⊆ vitaliUnion := by
       norm_cast at this
     have : (d: ℝ) ≤ 1 := by linarith
     norm_cast at this
+  --actual proof
+  simp_all [vitaliUnion]
   use d
   simp[trans_vitaliSet]
   constructor
   · exact dI
-  rw[d2]
-  simp[vitaliSet]
+  simp[d2, vitaliSet]
   exact Exists.intro ⟦⟨x, hx⟩⟧ rfl
 
 lemma vitUn_sub_J : vitaliUnion ⊆ J := by
@@ -188,8 +175,8 @@ lemma vitUn_sub_J : vitaliUnion ⊆ J := by
       use a
     exact ha (this hxi0)
   have h2 : V ⊆ J := by
-    rintro x ⟨i0 , hxi⟩
-    obtain ⟨a, ha⟩ := hxi.1
+    rintro x ⟨i0 , ⟨ ⟨a, ha⟩, hxi0⟩⟩
+    --obtain ⟨a, ha⟩ := hxi.1
     have : i0 ⊆ J := by
       rw[← ha]
       intro y ⟨z, hz⟩
@@ -199,9 +186,8 @@ lemma vitUn_sub_J : vitaliUnion ⊆ J := by
       have : ↑ a ∈ S := mem_preimage.mp (h0 (Subtype.coe_prop a))
       unfold S at this
       simp [mem_Icc] at this
-      have : (-1:ℝ) ≤ a := this.1
       constructor <;> linarith
-    exact this hxi.2
+    exact this hxi0
   intro x hx
   exact h2 (h hx)
 
