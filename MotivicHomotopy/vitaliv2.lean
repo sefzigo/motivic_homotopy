@@ -10,7 +10,6 @@ import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 import Mathlib.Data.Finite.Defs
 import Mathlib.Algebra.Order.Group.OrderIso
 
---import Mathlib.Topology.Instances.ENNReal.Lemmas
 
 open Set Filter Real Function Rat Classical ENNReal Group
 noncomputable section
@@ -97,7 +96,7 @@ def trans_vitaliSet (j : shiftRange) : Set ℝ := (fun x ↦ x + j)'' vitaliSet
 
 def vitaliUnion : Set ℝ := ⋃ i : shiftRange , trans_vitaliSet i
 
-
+-- two elements of the vitaliSet are equal once their difference is rational
 lemma vitali_mem_eq_off_rat_diff {x y : ℝ} (hx : x ∈ vitaliSet) (hy : y ∈ vitaliSet)(h : x - y ∈ range ((↑) : ℚ → ℝ)) : x = y := by
   have heq : x ≈ y := h
   obtain ⟨x', hx'⟩ := hx; obtain ⟨y', hy'⟩ := hy
@@ -107,6 +106,7 @@ lemma vitali_mem_eq_off_rat_diff {x y : ℝ} (hx : x ∈ vitaliSet) (hy : y ∈ 
   simp [Quotient.out_eq,← Quotient.out_equiv_out]
   exact heq
 
+-- the translates of the vitaliSet are disjoint
 lemma translates_disjoint : Pairwise (Disjoint on trans_vitaliSet) := by
   intro i j h U hUi hUj x hUx
   simp_all only [le_eq_subset, bot_eq_empty, mem_empty_iff_false]
@@ -118,24 +118,22 @@ lemma translates_disjoint : Pairwise (Disjoint on trans_vitaliSet) := by
     use (-i + j); simp
   simp_all [ne_eq, _root_.add_right_inj, neg_inj, Rat.cast_inj] ;aesop
 
+--the next three lemmas show that I ⊆ vitUN ⊆ J
 lemma vit_sub_I : vitaliSet ⊆ I := by
   rintro x ⟨t, ht⟩
   simp_all only [Subtype.coe_prop]
 
-lemma vit_trans_measure {μ : naiveMeasure} {r : shiftRange} :  μ vitaliSet = μ (trans_vitaliSet r) := by
-  unfold trans_vitaliSet
-  symm
-  apply μ.translation_invariance
-
 lemma I_sub_vitUn : I ⊆ vitaliUnion := by
   intro x  hx
-  --define delta and show that it is in shiftRange
-  let δ := x - Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩)
+  -- show that x is equivalent to [[x]].out
   have : equiv'  (Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩)) ⟨ x, hx⟩ := by exact Quotient.eq_mk_iff_out.mp rfl
+  -- give a name to [[x]].out to extract the real value later
   set y  :=  Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩ ) with y_def
+   --define delta = x - [[x]].out and show that it comes from d in shiftRange
+  let δ := x - Quotient.out (Quotient.mk equiv' ⟨ x, hx⟩)
   have ⟨d, d2⟩ : δ ∈ range Rat.cast := equiv'.symm this
   have dI : d ∈ shiftRange := by
-    unfold I at *;simp_all [shiftRange]
+    unfold I at *; simp_all [shiftRange]
     rw[← y_def] at d2
     obtain ⟨y, hy⟩ := y
     simp [mem_Icc] at hx hy
@@ -145,7 +143,7 @@ lemma I_sub_vitUn : I ⊆ vitaliUnion := by
       norm_cast at this
     have : (d: ℝ) ≤ 1 := by linarith
     norm_cast at this
-  --actual proof
+  --proof that I ⊆ vitUn
   simp_all [vitaliUnion]
   use d
   simp[trans_vitaliSet]
@@ -154,9 +152,11 @@ lemma I_sub_vitUn : I ⊆ vitaliUnion := by
   simp[d2, vitaliSet]
   exact Exists.intro ⟦⟨x, hx⟩⟧ rfl
 
+--idea: vitaliSet ⊆ I => vitUn ⊆ ⋃ i: shiftRange I + i =:V and its easy to show that V ⊆ J
 lemma vitUn_sub_J : vitaliUnion ⊆ J := by
   let I_i (i : shiftRange) : Set ℝ := (fun x ↦ x + i)'' I
   let V :=  ⋃ i : shiftRange, I_i i
+  --show taht shiftRange ⊆ [-1,1], this is an artifact of the fact that shiftRange was not defined as Icc -1 1 ⊆ ℚ
   have h0: Rat.cast '' shiftRange ⊆ S := by
     intro x
     simp[J, shiftRange]
@@ -176,7 +176,6 @@ lemma vitUn_sub_J : vitaliUnion ⊆ J := by
     exact ha (this hxi0)
   have h2 : V ⊆ J := by
     rintro x ⟨i0 , ⟨ ⟨a, ha⟩, hxi0⟩⟩
-    --obtain ⟨a, ha⟩ := hxi.1
     have : i0 ⊆ J := by
       rw[← ha]
       intro y ⟨z, hz⟩
@@ -190,6 +189,13 @@ lemma vitUn_sub_J : vitaliUnion ⊆ J := by
     exact this hxi0
   intro x hx
   exact h2 (h hx)
+
+
+--we compute the measure of the vitali translates and the intervall J
+lemma vit_trans_measure {μ : naiveMeasure} {r : shiftRange} :  μ vitaliSet = μ (trans_vitaliSet r) := by
+  unfold trans_vitaliSet
+  symm
+  apply μ.translation_invariance
 
 lemma J_measure (μ : naiveMeasure) : μ J = ENNReal.ofReal 3 := by
   have eqJ (μ : naiveMeasure) : μ J = μ K := by
@@ -205,6 +211,7 @@ lemma J_measure (μ : naiveMeasure) : μ J = ENNReal.ofReal 3 := by
   rw[eqJ]
   exact μ.normalised
 
+--vitali's theorem: the vitaliSet is not measurable.
 theorem vitali (μ : naiveMeasure) (t : ENNReal): μ vitaliSet = t → False := by
   by_contra h
   by_cases h0 : t = 0
